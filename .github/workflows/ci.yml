@@ -8,16 +8,16 @@ name: CI
 # separate "Release" run, and the commit is never built twice.
 #
 # Triggers:
-# - pull_request into main: every PR is built and tested, from this repo or a
+# - pull_request into build-fork: every PR is built and tested, from this repo or a
 #   fork. Nothing is uploaded, so a PR never leaves a package behind that could
 #   be mistaken for something deployable.
-# - push to main: builds the commit and keeps the packages as artifacts of the
+# - push to build-fork: builds the commit and keeps the packages as artifacts of the
 #   run. If a `vX.Y.Z` tag points at that commit on the remote when the builds
 #   finish, the same run then drafts the release from those packages.
 # - workflow_dispatch: build any branch or tag by hand (Actions tab or
 #   `gh workflow run ci.yml --ref <branch>`). Treated like a push.
 #
-# A tag push is deliberately NOT a trigger. `git push origin main --tags` would
+# A tag push is deliberately NOT a trigger. `git push origin build-fork --tags` would
 # start two runs on the same commit (one for the branch, one for the tag) and
 # build it twice, leaving the packages in one run and the release in the other.
 # Instead the `tag` job
@@ -30,9 +30,9 @@ name: CI
 # Feature branches without a PR are not built.
 on:
   push:
-    branches: [main]
+    branches: [build-fork]
   pull_request:
-    branches: [main]
+    branches: [build-fork]
   workflow_dispatch:
 
 # A pull request cancels its own superseded runs. Everything else gets one group
@@ -113,14 +113,14 @@ jobs:
           echo "App version (from Cargo.toml): $version"
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      # Only the main branch saves the cache. Pull request builds and manual
+      # Only the build-fork branch saves the cache. Pull request builds and manual
       # dispatches on other refs can still restore from it, but letting each one
       # save would fill the repo's 10 GB cache quota with throwaway caches and
       # evict the real one.
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/build-fork' }}
 
       # --- tools and libraries a script cannot install for itself -------------
       - name: Install system dependencies
